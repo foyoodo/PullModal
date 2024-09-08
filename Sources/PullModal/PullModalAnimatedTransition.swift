@@ -15,6 +15,10 @@ open class PullModalAnimatedTransition<Base: AnyObject, Target: PullModalViewCon
 
     public private(set) var interruptibleAnimator: UIViewPropertyAnimator?
 
+    open var destinationContainer: UIView {
+        modal.target.view
+    }
+
     public init(modal: TargetPullModal<Base, Target>) {
         self.modal = modal
     }

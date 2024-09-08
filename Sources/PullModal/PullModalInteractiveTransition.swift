@@ -19,6 +19,8 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
         animatedTransition.operation
     }
 
+    public var isTransitioning = false
+
     public var percentComplete: CGFloat {
         animatedTransition.interruptibleAnimator?.fractionComplete ?? .zero
     }
@@ -29,9 +31,9 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
 
     open var wantsInteractiveStart: Bool = false
 
-    var originalCenter: CGPoint = .zero
+    open var containerViewAnchored: Bool = false
 
-    private var containerViewAnchored: Bool = false
+    open var destinationOriginalCenter: CGPoint = .zero
 
     private var contentOffsetObservation: NSKeyValueObservation?
 
@@ -96,8 +98,6 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
 
         animatedTransition?.interruptibleAnimator?.isReversed = true
 
-        print("cancel percentComplete: \(percentComplete)")
-
         animatedTransition?.interruptibleAnimator?.continueAnimation(
             withTimingParameters: timingParameters,
             durationFactor: durationFactor / completionSpeed
@@ -107,8 +107,6 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
         if operation == .dismiss {
             animatedTransition?.interruptibleAnimator?.fractionComplete = 1 - percentComplete
         }
-
-        print("cancel percentComplete: \(percentComplete)")
     }
 
     open func finish(velocity: CGPoint? = nil) {
@@ -130,10 +128,6 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
             }
             completionSpeed = 1.0
         }
-
-        print("finish: completionSpeed: \(completionSpeed)")
-
-        print("fractionComplete: \(percentComplete)")
 
         animatedTransition?.interruptibleAnimator?.isReversed = false
         animatedTransition?.interruptibleAnimator?.continueAnimation(
@@ -178,64 +172,125 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
         return scrollView.contentOffset.y > -max(0, scrollView.adjustedContentInset.top)
     }
 
-    @objc open func handlePanGesture(_ recognizer: UIPanGestureRecognizer) {
-        guard let view = recognizer.view else { return }
+    open func handlePanGestureBegan(_ recognizer: UIPanGestureRecognizer) {
+        // interrupt the presentation
+        wantsInteractiveStart = operation == .present
 
-        let viewController = modal.target!
+        if isTransitioning {
+            pause()
+            containerViewAnchored = false
+        } else {
+            destinationOriginalCenter = modal.target.view.center
+        }
+    }
+
+    @objc open func handlePanGesture(_ recognizer: UIPanGestureRecognizer) {
+        if shouldFail(panGesture: recognizer) {
+            recognizer.setTranslation(.zero, in: nil)
+            return
+        }
+
+        if recognizer.state == .began {
+            handlePanGestureBegan(recognizer)
+            return
+        }
 
         let velocity = recognizer.velocity(in: nil)
 
         switch recognizer.state {
-        case .began:
-            recognizer.setTranslation(.zero, in: nil)
-
-            wantsInteractiveStart = true
-
-            if let _ = animatedTransition?.interruptibleAnimator {
-                pause()
-                containerViewAnchored = false
-            } else {
-                guard viewController.isBeingDismissed == false else { return }
-
-                viewController.dismiss(animated: true)
-            }
         case .changed:
-            if shouldFail(panGesture: recognizer) {
-                recognizer.setTranslation(.zero, in: nil)
-                return
-            }
-
             let translation = recognizer.translation(in: nil)
 
-            let fraction: CGFloat
+            if isTransitioning {
+                guard let view = recognizer.view else { return }
 
-            switch operation {
-            case .present:
-                fraction = min(1, max(0, percentComplete - translation.y / view.bounds.height))
-                shouldCompleteTransition = fraction - velocity.y / view.bounds.height > 0.6
-                containerViewAnchored = fraction == 1
-            case .dismiss:
-                fraction = min(1, max(0, percentComplete + translation.y / view.bounds.height))
-                shouldCompleteTransition = fraction + velocity.y / view.bounds.height > 0.6
-                containerViewAnchored = fraction == 0
+                let fraction: CGFloat
+
+                switch operation {
+                case .present:
+                    fraction = min(1, max(0, percentComplete - translation.y / view.bounds.height))
+                    shouldCompleteTransition = fraction - velocity.y / view.bounds.height > 0.6
+                    containerViewAnchored = fraction == 1
+                case .dismiss:
+                    fraction = min(1, max(0, percentComplete + translation.y / view.bounds.height))
+                    shouldCompleteTransition = fraction + velocity.y / view.bounds.height > 0.6
+                    containerViewAnchored = fraction == 0
+                }
+
+                update(fraction)
+
+                if fraction == 1.0 {
+                    finish()
+                    isTransitioning = false
+                    destinationOriginalCenter = modal.target.view.center
+                }
+            } else {
+                guard let destinationView = animatedTransition?.destinationContainer else {
+                    break
+                }
+
+                if translation.y > 0 {
+                    destinationView.center.y += translation.y
+                } else {
+                    if destinationView.center.y + translation.y > destinationOriginalCenter.y {
+                        destinationView.center.y += translation.y
+                    } else {
+                        destinationView.center = destinationOriginalCenter
+                    }
+                }
+
+                containerViewAnchored = destinationView.center == destinationOriginalCenter
             }
-
-            update(fraction)
 
             recognizer.setTranslation(.zero, in: nil)
         case .ended, .cancelled:
-            if shouldCompleteTransition {
-                finish(velocity: velocity)
+            if isTransitioning {
+                if shouldCompleteTransition {
+                    finish(velocity: velocity)
+                } else {
+                    cancel(velocity: velocity)
+                }
             } else {
-                cancel(velocity: velocity)
+                if !restoreDestinationPosition(velocity: velocity) {
+                    modal.target.dismiss(animated: true)
+                }
             }
-            wantsInteractiveStart = false
-        case .failed:
-            cancel()
-            wantsInteractiveStart = false
-        default:
-            wantsInteractiveStart = false
+        default: ()
         }
+
+        wantsInteractiveStart = false
+    }
+
+    open func restoreDestinationPosition(velocity: CGPoint) -> Bool {
+        guard let destinationView = animatedTransition?.destinationContainer,
+              let frame = (transitionContext?.containerView ?? modal.target.view.window)?.bounds
+        else {
+            return false
+        }
+
+        let distance = destinationView.frame.minY
+
+        if (distance + velocity.y) / frame.height > 0.6 {
+            return false
+        }
+
+        let initialVelocityY = max(0, distance / -velocity.y)
+
+        let animator = UIViewPropertyAnimator(
+            duration: 0.35,
+            timingParameters: UISpringTimingParameters(
+                dampingRatio: 1,
+                initialVelocity: .init(dx: 0, dy: initialVelocityY)
+            )
+        )
+
+        animator.addAnimations {
+            destinationView.frame = frame
+        }
+
+        animator.startAnimation()
+
+        return true
     }
 
     // MARK: UIViewControllerInteractiveTransitioning
@@ -244,6 +299,12 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
         self.transitionContext = transitionContext
 
         animatedTransition.animateTransition(using: transitionContext)
+
+        isTransitioning = true
+
+        animatedTransition?.interruptibleAnimator?.addCompletion { [weak self] _ in
+            self?.isTransitioning = false
+        }
 
         modal.target.mainScrollView.map(observeContentOffset(of:))
     }
