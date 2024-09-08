@@ -9,12 +9,12 @@ import QuartzCore
 
 extension CACornerMask {
 
-    static var all: CACornerMask {
+    public static var all: CACornerMask {
         [ layerMinXMinYCorner, layerMinXMaxYCorner,
           layerMaxXMinYCorner, layerMaxXMaxYCorner ]
     }
 
-    static var minY: CACornerMask {
+    public static var minY: CACornerMask {
         [ layerMinXMinYCorner, layerMaxXMinYCorner ]
     }
 }

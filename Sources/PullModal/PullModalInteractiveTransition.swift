@@ -11,7 +11,7 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
 
     public let modal: TargetPullModal<Base, Target>
 
-    public var transitionContext: (any UIViewControllerContextTransitioning)?
+    public weak var transitionContext: (any UIViewControllerContextTransitioning)?
 
     public var animatedTransition: PullModalAnimatedTransition<Base, Target>!
 
@@ -34,6 +34,11 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
     private var containerViewAnchored: Bool = false
 
     private var contentOffsetObservation: NSKeyValueObservation?
+
+    deinit {
+        contentOffsetObservation?.invalidate()
+        contentOffsetObservation = nil
+    }
 
     public required init(modal: TargetPullModal<Base, Target>) {
         self.modal = modal
@@ -176,7 +181,7 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
     @objc open func handlePanGesture(_ recognizer: UIPanGestureRecognizer) {
         guard let view = recognizer.view else { return }
 
-        let viewController = modal.target
+        let viewController = modal.target!
 
         let velocity = recognizer.velocity(in: nil)
 
@@ -190,7 +195,7 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
                 pause()
                 containerViewAnchored = false
             } else {
-                guard !viewController.isBeingDismissed else { return }
+                guard viewController.isBeingDismissed == false else { return }
 
                 viewController.dismiss(animated: true)
             }
