@@ -166,15 +166,21 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
     }
 
     func shouldFail(panGesture recognizer: UIPanGestureRecognizer) -> Bool {
+        // disable dismiss interruption
+        guard operation == .present else {
+            return true
+        }
+
         guard let scrollView = modal.target.mainScrollView else {
             return true
         }
+
         return scrollView.contentOffset.y > -max(0, scrollView.adjustedContentInset.top)
     }
 
     open func handlePanGestureBegan(_ recognizer: UIPanGestureRecognizer) {
         // interrupt the presentation
-        wantsInteractiveStart = operation == .present
+        wantsInteractiveStart = true
 
         if isTransitioning {
             pause()
@@ -253,7 +259,14 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
             } else {
                 if !restoreDestinationPosition(velocity: velocity) {
                     modal.target.dismiss(animated: true)
+                    isTransitioning = true
                 }
+            }
+        case .failed:
+            if isTransitioning {
+                cancel()
+            } else {
+                restoreDestinationPosition()
             }
         default: ()
         }
