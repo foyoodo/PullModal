@@ -274,7 +274,7 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
         wantsInteractiveStart = false
     }
 
-    open func restoreDestinationPosition(velocity: CGPoint) -> Bool {
+    open func restoreDestinationPosition(velocity: CGPoint = .zero) -> Bool {
         guard let destinationView = animatedTransition?.destinationContainer,
               let frame = (transitionContext?.containerView ?? modal.target.view.window)?.bounds
         else {
