@@ -289,19 +289,15 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
 
         let initialVelocityY = max(0, distance / -velocity.y)
 
-        let animator = UIViewPropertyAnimator(
-            duration: 0.35,
-            timingParameters: UISpringTimingParameters(
-                dampingRatio: 1,
-                initialVelocity: .init(dx: 0, dy: initialVelocityY)
-            )
-        )
-
-        animator.addAnimations {
+        UIView.animate(
+            withDuration: 0.35,
+            delay: 0,
+            usingSpringWithDamping: 1,
+            initialSpringVelocity: initialVelocityY,
+            options: [.allowUserInteraction, .beginFromCurrentState]
+        ) {
             destinationView.frame = frame
         }
-
-        animator.startAnimation()
 
         return true
     }
