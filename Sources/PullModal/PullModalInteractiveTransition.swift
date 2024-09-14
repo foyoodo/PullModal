@@ -258,6 +258,7 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
                 }
             } else {
                 if !restoreDestinationPosition(velocity: velocity) {
+                    wantsInteractiveStart = false
                     modal.target.dismiss(animated: true)
                     isTransitioning = true
                 }
