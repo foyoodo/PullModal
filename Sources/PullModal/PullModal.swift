@@ -30,10 +30,6 @@ public struct TargetPullModal<Base: AnyObject, Target: PullModalViewController> 
 
     public weak var target: Target!
 
-    public var base: Base? {
-        modal.base
-    }
-
     init(_ modal: PullModal<Base>, target: Target) {
         self.modal = modal
         self.target = target
