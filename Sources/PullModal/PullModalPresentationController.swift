@@ -15,6 +15,7 @@ open class PullModalPresentationController<Base: AnyObject, Target: PullModalVie
         let view = UIView()
         view.backgroundColor = .black.withAlphaComponent(min(1, modal.dimmedAlpha))
         view.alpha = 0
+        view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.onDimmed)))
         return view
     }()
 
@@ -85,5 +86,9 @@ open class PullModalPresentationController<Base: AnyObject, Target: PullModalVie
                 dimmedView.alpha = 0
             }
         }
+    }
+
+    @objc private func onDimmed() {
+        presentedViewController.dismiss(animated: true)
     }
 }
