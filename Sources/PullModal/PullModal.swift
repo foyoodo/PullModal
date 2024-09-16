@@ -23,6 +23,7 @@ public struct PullModal<Base: AnyObject> {
     }
 }
 
+@dynamicMemberLookup
 public struct TargetPullModal<Base: AnyObject, Target: PullModalViewController> {
 
     let modal: PullModal<Base>
@@ -37,12 +38,14 @@ public struct TargetPullModal<Base: AnyObject, Target: PullModalViewController> 
         self.modal = modal
         self.target = target
     }
-}
 
-extension TargetPullModal {
+    public subscript<Property>(dynamicMember keyPath: ReferenceWritableKeyPath<PullModal<Base>, Property>) -> Property {
+        get { modal[keyPath: keyPath] }
+        set { modal[keyPath: keyPath] = newValue }
+    }
 
-    var duration: TimeInterval {
-        modal.duration
+    public subscript<Property>(dynamicMember keyPath: KeyPath<PullModal<Base>, Property>) -> Property {
+        modal[keyPath: keyPath]
     }
 }
 
