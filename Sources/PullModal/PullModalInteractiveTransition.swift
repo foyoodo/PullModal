@@ -172,7 +172,7 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
         }
 
         guard let scrollView = modal.target.mainScrollView else {
-            return true
+            return false
         }
 
         return scrollView.contentOffset.y > -max(0, scrollView.adjustedContentInset.top)
