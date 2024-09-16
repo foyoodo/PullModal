@@ -284,7 +284,8 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
 
         let distance = destinationView.frame.minY
 
-        if (distance + velocity.y) / frame.height > 0.6 {
+        let offset = destinationView.center.y - destinationOriginalCenter.y
+        if (offset + velocity.y) / destinationView.frame.height > 0.4 {
             return false
         }
 
@@ -297,7 +298,7 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
             initialSpringVelocity: initialVelocityY,
             options: [.allowUserInteraction, .beginFromCurrentState]
         ) {
-            destinationView.frame = frame
+            destinationView.center = self.destinationOriginalCenter
         }
 
         return true
