@@ -7,85 +7,53 @@
 
 import UIKit
 
-private enum AssociatedKeys {
-    static var pullModalTransitioningDelegate: UInt8 = 0
-    static var pullModalPresentationController: UInt8 = 0
-}
+public class PullModal<Base: AnyObject>: Modal {
 
-public struct PullModal<Base: AnyObject> {
+    public var duration: TimeInterval = 0.5
 
-    var duration: TimeInterval = 0.6
+    public var detent: ModalDetent = .fullScreen
+
+    public var cornerRadius: CGFloat = 22.0
+
+    public var dimmedAlpha: CGFloat = 0.4
 
     public private(set) weak var base: Base?
 
     public init(_ base: Base) {
         self.base = base
     }
-}
 
-@dynamicMemberLookup
-public struct TargetPullModal<Base: AnyObject, Target: PullModalViewController> {
-
-    let modal: PullModal<Base>
-
-    public weak var target: Target!
-
-    init(_ modal: PullModal<Base>, target: Target) {
-        self.modal = modal
-        self.target = target
-    }
-
-    public subscript<Property>(dynamicMember keyPath: ReferenceWritableKeyPath<PullModal<Base>, Property>) -> Property {
-        get { modal[keyPath: keyPath] }
-        set { modal[keyPath: keyPath] = newValue }
-    }
-
-    public subscript<Property>(dynamicMember keyPath: KeyPath<PullModal<Base>, Property>) -> Property {
-        modal[keyPath: keyPath]
+    public func config(_ closure: (_ model: Modal) -> Void) -> Self {
+        closure(self)
+        return self
     }
 }
 
-public protocol PullModalCompatible: AnyObject { }
+extension PullModal {
 
-extension PullModalCompatible {
-
-    public var pullModal: PullModal<Self> {
-        get { PullModal(self) }
-        set { }
-    }
-}
-
-extension UIViewController: PullModalCompatible { }
-
-extension PullModal where Base: UIViewController {
-
-    public func present<Target>(
-        _ viewControllerToPresent: Target,
-        animated: Bool = true
-    ) where Target: PullModalViewController {
-        self.present(
-            viewControllerToPresent,
-            using: PullModalTransitioningDelegate<Base, Target>.self,
-            animated: animated
-        )
+    public func duration(_ duration: TimeInterval) -> Self {
+        self.duration = duration
+        return self
     }
 
-    public func present<Target>(
-        _ viewControllerToPresent: Target,
-        using transitioningDelegate: PullModalTransitioningDelegate<Base, Target>.Type,
-        animated: Bool = true
-    ) where Target: PullModalViewController {
-        guard let viewController = base else { return }
+    public func detent(_ detent: ModalDetent) -> Self {
+        self.detent = detent
+        return self
+    }
 
-        let modal = TargetPullModal(self, target: viewControllerToPresent)
+    public func cornerRadius(_ cornerRadius: CGFloat) -> Self {
+        self.cornerRadius = cornerRadius
+        return self
+    }
 
-        let transitioningDelegate = transitioningDelegate.init(modal: modal)
+    public func dimmedAlpha(_ alpha: CGFloat) -> Self {
+        self.dimmedAlpha = alpha
+        return self
+    }
 
-        objc_setAssociatedObject(viewControllerToPresent, &AssociatedKeys.pullModalTransitioningDelegate, transitioningDelegate, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-
-        viewControllerToPresent.modalPresentationStyle = .custom
-        viewControllerToPresent.transitioningDelegate = transitioningDelegate
-
-        viewController.present(viewControllerToPresent, animated: animated)
+    @discardableResult
+    public func removeDimmed() -> Self {
+        self.dimmedAlpha = 0.0
+        return self
     }
 }

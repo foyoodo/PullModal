@@ -27,29 +27,27 @@ open class PullModalAnimatedTransition<Base: AnyObject, Target: PullModalViewCon
         for animator: UIViewPropertyAnimator,
         transitionContext: any UIViewControllerContextTransitioning,
         containerView: UIView,
+        fromViewController: UIViewController,
+        toViewController: UIViewController,
         fromView: UIView,
         toView: UIView
     ) {
         switch operation {
         case .present:
+            let toViewEndFrame = transitionContext.finalFrame(for: toViewController)
             let toViewStartFrame = CGRect(
                 origin: .init(x: .zero, y: containerView.bounds.height),
-                size: containerView.bounds.size
+                size: toViewEndFrame.size
             )
-            let toViewEndFrame = containerView.bounds
 
             toView.frame = toViewStartFrame
             containerView.addSubview(toView)
 
-            toView.layer.maskedCorners = .minY
-
             animator.addAnimations {
                 toView.frame = toViewEndFrame
-                toView.setCornerRadius(containerView.window?.screen.displayCornerRadius ?? 0).adjustMasksToBounds()
             }
 
             animator.addCompletion { _ in
-                toView.setCornerRadius(0).adjustMasksToBounds()
                 transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
             }
         case .dismiss:
@@ -58,19 +56,51 @@ open class PullModalAnimatedTransition<Base: AnyObject, Target: PullModalViewCon
                 size: containerView.bounds.size
             )
 
-            fromView.layer.maskedCorners = .minY
-
-            fromView.setCornerRadius(containerView.window?.screen.displayCornerRadius ?? 0).adjustMasksToBounds()
-
             animator.addAnimations {
                 fromView.frame = fromViewEndFrame
-                fromView.setCornerRadius(0)
             }
 
             animator.addCompletion { _ in
-                fromView.setCornerRadius(0).adjustMasksToBounds()
-                fromView.layer.maskedCorners = .all
                 transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
+            }
+        }
+
+        adjustCornerRadius(
+            animator: animator,
+            containerView: containerView,
+            fromView: fromView,
+            toView: toView
+        )
+    }
+
+    open func adjustCornerRadius(
+        animator: UIViewPropertyAnimator,
+        containerView: UIView,
+        fromView: UIView,
+        toView: UIView
+    ) {
+        guard case .fullScreen = modal.detent else { return }
+
+        switch operation {
+        case .present:
+            toView.layer.maskedCorners = .minY
+
+            animator.addAnimations {
+                toView.setCornerRadius(containerView.window?.screen.displayCornerRadius ?? 0).adjustMasksToBounds()
+            }
+            animator.addCompletion { _ in
+                toView.setCornerRadius(0).adjustMasksToBounds()
+            }
+        case .dismiss:
+            fromView.layer.maskedCorners = .minY
+            fromView.setCornerRadius(containerView.window?.screen.displayCornerRadius ?? 0).adjustMasksToBounds()
+
+            animator.addAnimations {
+                fromView.setCornerRadius(0)
+            }
+            animator.addCompletion { _ in
+                fromView.layer.maskedCorners = .all
+                fromView.setCornerRadius(0).adjustMasksToBounds()
             }
         }
     }
@@ -116,6 +146,8 @@ open class PullModalAnimatedTransition<Base: AnyObject, Target: PullModalViewCon
             for: animator,
             transitionContext: transitionContext,
             containerView: containerView,
+            fromViewController: fromVC,
+            toViewController: toVC,
             fromView: fromView ?? fromVC.view,
             toView: toView ?? toVC.view
         )

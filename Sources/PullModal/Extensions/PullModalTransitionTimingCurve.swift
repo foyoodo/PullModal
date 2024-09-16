@@ -36,8 +36,7 @@ open class PullModalTransitionTimingCurve: NSObject, UITimingCurveProvider {
     }
 
     public var springTimingParameters: UISpringTimingParameters? {
-        let damping: CGFloat = operation == .present ? 110 : 94
-        return .init(mass: 3, stiffness: 1000, damping: damping, initialVelocity: .zero)
+        .init(dampingRatio: 1.0)
     }
 }
 
