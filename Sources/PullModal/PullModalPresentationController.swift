@@ -22,15 +22,7 @@ open class PullModalPresentationController<Base: AnyObject, Target: PullModalVie
     private var shouldDimmed: Bool { modal.dimmedAlpha > 0 }
 
     open override var frameOfPresentedViewInContainerView: CGRect {
-        guard let bounds = containerView?.bounds else { return .zero }
-        let height = min(bounds.height, modal.detent.height(in: bounds.height))
-        let frame = CGRect(
-            x: 0,
-            y: bounds.height - height,
-            width: bounds.width,
-            height: height
-        )
-        return frame
+        frameOfPresentedViewInContainerView(size: containerView?.bounds.size)
     }
 
     open override func presentationTransitionWillBegin() {
@@ -86,6 +78,20 @@ open class PullModalPresentationController<Base: AnyObject, Target: PullModalVie
                 dimmedView.alpha = 0
             }
         }
+    }
+
+    private func frameOfPresentedViewInContainerView(size: CGSize?) -> CGRect {
+        guard let containerView else { return .zero }
+        let size = size ?? containerView.bounds.size
+        let safeArea = CGRect(origin: .zero, size: size).inset(by: containerView.safeAreaInsets)
+        let height = min(size.height, modal.detent.height(in: size.height))
+        let frame = CGRect(
+            x: safeArea.minX,
+            y: size.height - height,
+            width: safeArea.width,
+            height: height
+        )
+        return frame
     }
 
     @objc private func onDimmed() {

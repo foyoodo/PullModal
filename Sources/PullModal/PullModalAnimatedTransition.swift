@@ -36,7 +36,7 @@ open class PullModalAnimatedTransition<Base: AnyObject, Target: PullModalViewCon
         case .present:
             let toViewEndFrame = transitionContext.finalFrame(for: toViewController)
             let toViewStartFrame = CGRect(
-                origin: .init(x: .zero, y: containerView.bounds.height),
+                origin: .init(x: toViewEndFrame.minX, y: containerView.bounds.height),
                 size: toViewEndFrame.size
             )
 
@@ -51,9 +51,10 @@ open class PullModalAnimatedTransition<Base: AnyObject, Target: PullModalViewCon
                 transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
             }
         case .dismiss:
+            let fromViewStartFrame = transitionContext.initialFrame(for: fromViewController)
             let fromViewEndFrame = CGRect(
-                origin: .init(x: .zero, y: containerView.bounds.height),
-                size: containerView.bounds.size
+                origin: .init(x: fromViewStartFrame.minX, y: containerView.bounds.height),
+                size: fromViewStartFrame.size
             )
 
             animator.addAnimations {
