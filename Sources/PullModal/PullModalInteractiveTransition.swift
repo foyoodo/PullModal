@@ -180,7 +180,7 @@ open class PullModalInteractiveTransition<Base: AnyObject, Target: PullModalView
 
     open func handlePanGestureBegan(_ recognizer: UIPanGestureRecognizer) {
         // interrupt the presentation
-        wantsInteractiveStart = true
+        wantsInteractiveStart = operation == .present
 
         if isTransitioning {
             pause()
